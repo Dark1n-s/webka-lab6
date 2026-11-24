@@ -1,0 +1,346 @@
+openapi: 3.0.3
+info:
+  title: URL Shortener API
+  version: 1.0.0
+  description: REST API service for shortening URLs, managing short links, and tracking redirect statistics.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: /
+    description: Current server host
+
+security: []
+
+tags:
+  - name: Links
+    description: Operations for creating, viewing, updating, and deleting short links
+  - name: Redirect
+    description: Public redirection endpoint
+  - name: System
+    description: Service health and diagnostics
+
+paths:
+  /health:
+    get:
+      tags:
+        - System
+      summary: Check service and database health
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service and database are operational
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                database: connected
+        '503':
+          description: Database connection failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: error
+                database: disconnected
+
+  /api/links:
+    post:
+      tags:
+        - Links
+      summary: Create a new short link
+      operationId: createLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLinkRequest'
+            examples:
+              generatedCode:
+                summary: Auto-generated short code
+                value:
+                  url: https://lnu.edu.ua/about/faculties/electronics-and-computer-technologies
+              customAlias:
+                summary: Custom user alias
+                value:
+                  url: https://github.com
+                  alias: my-gh
+      responses:
+        '201':
+          description: Short link successfully created
+          headers:
+            Location:
+              description: URI of the newly created link resource
+              schema:
+                type: string
+                example: /api/links/aB3xK9
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    get:
+      tags:
+        - Links
+      summary: Retrieve all short links
+      operationId: getAllLinks
+      responses:
+        '200':
+          description: List of all stored short links
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Link'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/links/{code}:
+    parameters:
+      - $ref: '#/components/parameters/CodeParam'
+
+    get:
+      tags:
+        - Links
+      summary: Get details of a specific short link
+      operationId: getLinkByCode
+      responses:
+        '200':
+          description: Short link metadata and click statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - Links
+      summary: Update the destination URL of an existing short link
+      operationId: updateLinkUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLinkRequest'
+            example:
+              url: https://electronics.lnu.edu.ua
+      responses:
+        '200':
+          description: Destination URL successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Links
+      summary: Delete a short link
+      operationId: deleteLink
+      responses:
+        '204':
+          description: Short link successfully deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /{code}:
+    get:
+      tags:
+        - Redirect
+      summary: Redirect to the original URL and increment click counter
+      operationId: redirectToOriginalUrl
+      parameters:
+        - $ref: '#/components/parameters/CodeParam'
+      responses:
+        '302':
+          description: Temporary redirect to the original URL
+          headers:
+            Location:
+              description: Target original URL
+              schema:
+                type: string
+                format: uri
+                example: https://lnu.edu.ua
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    CodeParam:
+      name: code
+      in: path
+      required: true
+      description: Unique short code or custom alias of the link
+      schema:
+        type: string
+        minLength: 3
+        maxLength: 20
+        pattern: '^[a-zA-Z0-9_-]+$'
+      example: aB3xK9
+
+  schemas:
+    Link:
+      type: object
+      required:
+        - code
+        - shortUrl
+        - originalUrl
+        - clicks
+        - createdAt
+      properties:
+        code:
+          type: string
+          readOnly: true
+          description: Unique short identifier
+          example: aB3xK9
+        shortUrl:
+          type: string
+          format: uri
+          readOnly: true
+          description: Full shortened URL ready for sharing
+          example: http://localhost:8080/aB3xK9
+        originalUrl:
+          type: string
+          format: uri
+          description: Original destination URL
+          example: https://lnu.edu.ua
+        clicks:
+          type: integer
+          minimum: 0
+          readOnly: true
+          description: Total number of redirects performed
+          example: 0
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the short link was created
+          example: '2026-11-24T12:30:00.000Z'
+
+    CreateLinkRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Valid HTTP or HTTPS destination URL
+          example: https://lnu.edu.ua
+        alias:
+          type: string
+          minLength: 3
+          maxLength: 20
+          pattern: '^[a-zA-Z0-9_-]+$'
+          description: Optional custom short code (3-20 alphanumeric characters, underscores, or hyphens)
+          example: lnu-main
+
+    UpdateLinkRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: New valid HTTP or HTTPS destination URL
+          example: https://electronics.lnu.edu.ua
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - database
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+            - error
+        database:
+          type: string
+          enum:
+            - connected
+            - disconnected
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error identifier
+              example: LINK_NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error description
+              example: Short link with the specified code does not exist
+
+  responses:
+    BadRequest:
+      description: Invalid request body, malformed URL, or invalid alias format
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INVALID_URL
+              message: Provided URL must use http or https protocol
+
+    NotFound:
+      description: Short link with the given code was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: LINK_NOT_FOUND
+              message: Short link does not exist
+
+    Conflict:
+      description: Requested custom alias is already taken or reserved
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: ALIAS_TAKEN
+              message: Custom alias is already in use
+
+    InternalError:
+      description: Unexpected server or database error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: Unexpected internal server error
