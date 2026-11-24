@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yaml';
+import linksRouter from './routes/links.js';
+import { errorHandler } from './utils/errors.js';
 
 const app = express();
 const port = Number(process.env.port) || 8080;
@@ -29,7 +31,8 @@ app.get('/health', async (req, res) =>
 });
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
+app.use(linksRouter);
+app.use(errorHandler);
 app.listen(port, ()=>
 {
     console.log("ss")
