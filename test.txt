@@ -1,0 +1,82 @@
+curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://lnu.edu.ua/about/faculties/electronics-and-computer-technologies"
+}'
+
+
+curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://github.com",
+  "alias": "my-gh"
+}'
+
+
+curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "javascript:alert(1)"
+}'
+
+
+curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://github.com",
+  "alias": "my-gh"
+}'
+
+
+curl -X 'GET' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: */*'
+
+
+curl -X 'GET' \
+  'http://localhost:8080/api/links/my-gh' \
+  -H 'accept: */*'
+
+
+curl -X 'GET' \
+  'http://localhost:8080/api/links/unknown' \
+  -H 'accept: */*'
+
+
+curl.exe -i http://localhost:8080/my-gh
+
+
+curl -X 'PATCH' \
+  'http://localhost:8080/api/links/my-gh' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "not-a-valid-url"
+}'
+
+
+curl -X 'PATCH' \
+  'http://localhost:8080/api/links/unknown' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://lnu.edu.ua"
+}'
+
+
+curl -X 'DELETE' \
+  'http://localhost:8080/api/links/my-gh' \
+  -H 'accept: */*'
+
+
+curl -X 'DELETE' \
+  'http://localhost:8080/api/links/unknown' \
+  -H 'accept: */*'
